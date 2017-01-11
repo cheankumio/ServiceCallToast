@@ -8,6 +8,7 @@ import android.app.Service;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.icu.util.Calendar;
 import android.os.Bundle;
 import android.os.Handler;
@@ -25,29 +26,44 @@ import android.widget.Toast;
 public class MyService extends Service {
     public static int version;
     public static final String versiondata="OldVersion";
+    public static final String NowVersiondata="NowVersion";
     private Handler handler = new Handler();
-    int oldversion=0;
+    private Handler handler2 = new Handler();
+    public static boolean nowState=false;
+    public static int curversion=0;
+    SharedPreferences oldversionnum;
     PendingIntent pendingIntent;
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
+        Log.d("MYLOG","執行onBind");
         return null;
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        Log.d("MYLOG","執行Service");
         handler.postDelayed(showTime, 1000);
-        handler.postDelayed(updata, 8000);
-        oldversion = version;
+        handler2.postDelayed(updata, 8000);
+        oldversionnum = getSharedPreferences("DATA",0);
+        version = oldversionnum.getInt(versiondata,0);
+        curversion = oldversionnum.getInt(NowVersiondata,0);
+        Log.d("MYLOG","Num: "+version);
         Intent page2 = new Intent(this,Activity2.class);
         pendingIntent = PendingIntent.getActivity(this,0,page2,0);
         return super.onStartCommand(intent, flags, startId);
     }
 
+    @Override
+    public void onDestroy(){
+        nowState = false;
+        Log.d("MYLOG","結束Service");
+    }
+
     private Runnable showTime = new Runnable() {
         public void run() {
             Bundle message = new Bundle();
-            if(version>oldversion) {
+            if(version>curversion) {
                 //傳送version至主程式
                 message.putInt("Key", version);
                 Intent intent = new Intent("version");
@@ -55,8 +71,9 @@ public class MyService extends Service {
                 sendBroadcast(intent);
                 Toast.makeText(getApplicationContext(), "更新資訊", Toast.LENGTH_LONG).show();
                 notification();
-                oldversion = version;
+                nowState = true;
             }
+            Log.d("MYLOG","Num: "+version+"  cur: "+curversion);
             handler.postDelayed(this, 1000);
         }
     };
@@ -64,7 +81,7 @@ public class MyService extends Service {
     private Runnable updata = new Runnable() {
         public void run() {
             version++;
-            handler.postDelayed(this, 8000);
+            handler2.postDelayed(this, 8000);
         }
     };
     private void notification(){

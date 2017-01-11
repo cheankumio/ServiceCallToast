@@ -5,11 +5,14 @@ import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.content.SharedPreferences;
+import android.os.IBinder;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.app.NotificationCompat;
@@ -34,7 +37,7 @@ public class MainActivity extends AppCompatActivity {
 
         //儲存版本號
         oldversionnum = getSharedPreferences("DATA",0);
-        oldversion = oldversionnum.getInt(MyService.versiondata,0);
+        oldversion = oldversionnum.getInt(MyService.NowVersiondata,0);
         Log.d("MYLOG","APP Version: "+oldversion);
 
         //建立server監聽
@@ -49,18 +52,6 @@ public class MainActivity extends AppCompatActivity {
                  //判斷有無更新版本
                 if(version>oldversion) {
                     Log.d("MYLOG","version>oldversion");
-                    /*
-                    NotificationManager notificationManager = (NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
-                    Notification ns = new Notification.Builder(getApplicationContext())
-                            .setSmallIcon(R.mipmap.ic_launcher)
-                            .setWhen(System.currentTimeMillis())
-                            .setContentTitle("test Title")
-                            .setContentText("我是通知內容")
-                            .setContentIntent(pendingIntent)
-                            .build();
-                    ns.flags = Notification.FLAG_AUTO_CANCEL;
-                    notificationManager.notify(2,ns);
-                    */
                     oldversion = version;
                     versionbox.setText("Version: "+version);
                 }
@@ -70,12 +61,16 @@ public class MainActivity extends AppCompatActivity {
         //註冊過濾器
         IntentFilter filter = new IntentFilter("version");
         registerReceiver(receiver,filter);
-
-        mMyService = new Intent(MainActivity.this, com.example.c1103304.servicecalltoast.MyService.class);
-        startService(mMyService);
+        if(!MyService.nowState) {
+            //如果Service尚未啟動，則啟動服務
+            mMyService = new Intent(MainActivity.this, com.example.c1103304.servicecalltoast.MyService.class);
+            startService(mMyService);
+            Log.d("MYLOG","啟動Service");
+        }else{Log.d("MYLOG","Service已經啟動過了");}
         Intent page2 = new Intent(MainActivity.this,Activity2.class);
         pendingIntent = PendingIntent.getActivity(this,0,page2,0);
     }
+
 
     public void topage2(View view){
         Toast.makeText(getApplicationContext(), "我沒有功能", Toast.LENGTH_LONG).show();
@@ -89,7 +84,9 @@ public class MainActivity extends AppCompatActivity {
     public void reset(View view){
         oldversion = 0;
         MyService.version = 0;
-        oldversionnum.edit().putInt(MyService.versiondata,0).commit();
+        oldversionnum.edit().putInt(MyService.versiondata,0)
+                .putInt(MyService.NowVersiondata,0)
+                .commit();
     }
 
     @Override
@@ -97,7 +94,9 @@ public class MainActivity extends AppCompatActivity {
         Log.d("MYLOG","Activity is Destroy");
         //stopService(mMyService);
         //儲存目前版本號
-        oldversionnum.edit().putInt(MyService.versiondata,oldversion).commit();
+        oldversionnum.edit().putInt(MyService.versiondata,version)
+                .putInt(MyService.NowVersiondata,oldversion)
+                .commit();
         super.onDestroy();
     }
 }
