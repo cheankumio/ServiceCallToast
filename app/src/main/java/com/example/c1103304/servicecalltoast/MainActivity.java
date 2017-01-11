@@ -3,6 +3,7 @@ package com.example.c1103304.servicecalltoast;
 import android.app.AlertDialog;
 import android.app.Notification;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -15,19 +16,25 @@ import android.support.v7.app.NotificationCompat;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.TextView;
+import android.widget.Toast;
 
 public class MainActivity extends AppCompatActivity {
     Intent mMyService;
     int version=0;
     int oldversion=0;
+    TextView versionbox;
+    PendingIntent pendingIntent;
     SharedPreferences oldversionnum;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        versionbox = (TextView)findViewById(R.id.textView);
+
         //儲存版本號
         oldversionnum = getSharedPreferences("DATA",0);
-        oldversion = oldversionnum.getInt(appversion.versiondata,0);
+        oldversion = oldversionnum.getInt(MyService.versiondata,0);
         Log.d("MYLOG","APP Version: "+oldversion);
 
         //建立server監聽
@@ -38,11 +45,24 @@ public class MainActivity extends AppCompatActivity {
                 //取得版本號
                 Bundle message = intent.getExtras();
                 version = message.getInt("Key");
+                Log.d("MYLOG","running...");
                  //判斷有無更新版本
                 if(version>oldversion) {
-
-                    Log.d("MYLOG","version Updata. \n now version: "+version);
+                    Log.d("MYLOG","version>oldversion");
+                    /*
+                    NotificationManager notificationManager = (NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
+                    Notification ns = new Notification.Builder(getApplicationContext())
+                            .setSmallIcon(R.mipmap.ic_launcher)
+                            .setWhen(System.currentTimeMillis())
+                            .setContentTitle("test Title")
+                            .setContentText("我是通知內容")
+                            .setContentIntent(pendingIntent)
+                            .build();
+                    ns.flags = Notification.FLAG_AUTO_CANCEL;
+                    notificationManager.notify(2,ns);
+                    */
                     oldversion = version;
+                    versionbox.setText("Version: "+version);
                 }
             }
         };
@@ -52,42 +72,32 @@ public class MainActivity extends AppCompatActivity {
         registerReceiver(receiver,filter);
 
         mMyService = new Intent(MainActivity.this, com.example.c1103304.servicecalltoast.MyService.class);
-
+        startService(mMyService);
+        Intent page2 = new Intent(MainActivity.this,Activity2.class);
+        pendingIntent = PendingIntent.getActivity(this,0,page2,0);
     }
 
     public void topage2(View view){
-        Intent page2 = new Intent(MainActivity.this,Activity2.class);
-
-        //開啟服務及跳轉Activity
-        startService(mMyService);
-        startActivity(page2);
+        Toast.makeText(getApplicationContext(), "我沒有功能", Toast.LENGTH_LONG).show();
     }
+//    getApplicationContext()
 
     public void addversionNUM(View view){
-        appversion.version++;
+        MyService.version++;
     }
 
     public void reset(View view){
         oldversion = 0;
-        oldversionnum.edit().putInt(appversion.versiondata,0).commit();
-        //private void notification(){
-        NotificationManager notificationManager = (NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
-        Notification ns = new Notification.Builder(getApplicationContext())
-        .setSmallIcon(R.mipmap.ic_launcher)
-                .setWhen(System.currentTimeMillis())
-                .setContentTitle("test Title")
-                .setContentText("我是通知內容")
-                .build();
-        notificationManager.notify(2,ns);
-        //}
+        MyService.version = 0;
+        oldversionnum.edit().putInt(MyService.versiondata,0).commit();
     }
 
     @Override
     protected void onDestroy(){
         Log.d("MYLOG","Activity is Destroy");
-        stopService(mMyService);
+        //stopService(mMyService);
         //儲存目前版本號
-        oldversionnum.edit().putInt(appversion.versiondata,oldversion).commit();
+        oldversionnum.edit().putInt(MyService.versiondata,oldversion).commit();
         super.onDestroy();
     }
 }
